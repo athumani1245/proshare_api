@@ -55,9 +55,8 @@ class Mobile_Functions(http.Controller):
 
     @http.route('/mobile/login', type='json', auth="user")
     def authenticate(self, db, login, password, base_location=None):
-        request.session.authenticate(db, login, password)
+        session = request.session.authenticate(db, login, password)
         return request.env['ir.http'].session_info()
-    
     
     #registering to the application
     @http.route('/mobile/register', type='json', csrf=False, auth="public")
@@ -97,7 +96,12 @@ class Mobile_Functions(http.Controller):
         user = request.env['res.users'].sudo().search([('id','=', id)])
         for i in user:
             borrower = int(i.partner_id)
-            loan = request.env['account.loan'].sudo().create({ "name":purpose, "req_amount":amount, "loan_type":loan_type, "user_id": 2, "loan_period":loan_period, "state": state, "partner_id":borrower, "loan_amt":amount })  
+            # checking if user has incomplete loans
+            loans = request.env['account.loan'].sudo().search([('partner_id','=',borrower),('state', '!=','done')])
+            if loans:
+                return "you have another loan on progres. you can not create until current loan is completed"
+            else:
+                loan = request.env['account.loan'].sudo().create({ "name":purpose, "req_amount":amount, "loan_type":loan_type, "user_id": 2, "loan_period":loan_period, "state": state, "partner_id":borrower, "loan_amt":amount })  
             return loan
         
         
